@@ -7,7 +7,7 @@ from typing import List, Dict, Union
 import backoff
 import requests
 
-from ai_scientist.llm import get_response_from_llm, extract_json_between_markers, create_client, AVAILABLE_LLMS
+from ai_scientist.llm import get_response_from_llm, extract_json_between_markers, create_client, AVAILABLE_LLMS, extract_text_inside_backticks
 
 S2_API_KEY = os.getenv("S2_API_KEY")
 
@@ -385,7 +385,9 @@ The results of the last query are (empty on first round):
 Respond in the following format:
 
 THOUGHT:
+```thought
 <THOUGHT>
+```
 
 RESPONSE:
 ```json
@@ -402,6 +404,67 @@ A query will work best if you are able to recall the exact name of the paper you
 This JSON will be automatically parsed, so ensure the format is precise.'''
 
 
+
+make_agent_system_msg = """
+You are a meticulous AI researcher (PhD level) tasked with revitalizing ideas that failed the novelty check. The literature survey is complete—you know this idea overlaps existing work. Your mission is:
+
+1. **Analyze Why**: Clearly diagnose the core reasons the idea wasn’t novel (e.g., already solved problem, incremental variation, well-trodden methods).
+2. **Provide Insight**: Recommend concrete avenues—new dimensions, methodologies, applications, or domain shifts—that could turn it into a standout contribution.
+3. **Define Agents**: Propose a set of Agents (analysis modules or search strategies) that will explore these avenues. For each Agent, specify:
+   - **name**: a concise label
+   - **focus**: what aspect it addresses
+
+Use the following context when advising:
+
+{task_description}
+
+```python
+# experiment harness
+<experiment.py>
+{code}
+</experiment.py>
+```"""
+
+make_agent_prompt = '''
+=== Round {current_round} of {num_rounds} ===
+
+**Proposed Idea:**
+"""
+{idea}
+"""
+
+**Previous Search Results:**
+"""
+{last_query_results}
+"""
+
+**Previous Analysis:**
+- THOUGHT:
+  """{thought}"""
+- NOVELTY JUDGMENT:
+  """{novelty}"""
+
+**Your Task This Round:**
+1. **Reflect** briefly on the diagnosed shortcomings.
+2. **Design** 3–5 specialized Agents to address each shortcoming and explore novel dimensions.
+3. **Outline** for each Agent:
+   - **name**: short identifier
+   - **focus**: diagnostic or creative angle
+
+**Response Format (strict JSON):**
+```json
+{
+  "Agents": [
+    {
+      "name": "<AgentName>",
+      "focus": "<What to explore>"
+    },
+    ...
+  ]
+}
+```'''
+
+'''
 def check_idea_novelty(
         ideas,
         base_dir,
@@ -455,6 +518,8 @@ def check_idea_novelty(
 
                 ## PARSE OUTPUT
                 json_output = extract_json_between_markers(text)
+                thought_output = extract_text_inside_backticks(text, "thought")
+                #response_output = extract_text_inside_backticks(text, "response")
                 assert json_output is not None, "Failed to extract JSON from LLM output"
 
                 ## SEARCH FOR PAPERS
@@ -485,6 +550,119 @@ def check_idea_novelty(
         idea["novel"] = novel
 
     # Save results to JSON file
+    results_file = osp.join(base_dir, "ideas.json")
+    with open(results_file, "w") as f:
+        json.dump(ideas, f, indent=4)
+
+    return ideas
+'''
+
+
+def check_idea_novelty(
+        ideas,
+        base_dir,
+        client,
+        model,
+        max_num_iterations=10,
+        engine="semanticscholar",
+):
+    with open(osp.join(base_dir, "experiment.py"), "r") as f:
+        code = f.read()
+    with open(osp.join(base_dir, "prompt.json"), "r") as f:
+        prompt = json.load(f)
+        task_description = prompt["task_description"]
+
+    for idx, idea in enumerate(ideas):
+        if "novel" in idea:
+            print(f"Skipping idea {idx}, already checked.")
+            continue
+
+        print(f"\nChecking novelty of idea {idx}: {idea['Name']}")
+
+        novel = False
+        msg_history = []
+        papers_str = ""
+        thought_output = ""
+
+        for j in range(max_num_iterations):
+            try:
+                text, msg_history = get_response_from_llm(
+                    novelty_prompt.format(
+                        current_round=j + 1,
+                        num_rounds=max_num_iterations,
+                        idea=idea,
+                        last_query_results=papers_str,
+                    ),
+                    client=client,
+                    model=model,
+                    system_message=novelty_system_msg.format(
+                        num_rounds=max_num_iterations,
+                        task_description=task_description,
+                        code=code,
+                    ),
+                    msg_history=msg_history,
+                )
+                thought_output = extract_text_inside_backticks(text, "thought") or thought_output
+
+                if "decision made: novel" in text.lower():
+                    print("Decision made: novel after round", j)
+                    novel = True
+                    break
+                if "decision made: not novel" in text.lower():
+                    print("Decision made: not novel after round", j)
+                    break
+
+                # parse JSON
+                json_output = extract_json_between_markers(text)
+                assert json_output is not None, "Failed to extract JSON from LLM output"
+
+                # search
+                query = json_output.get("Query", "")
+                papers = search_for_papers(query, result_limit=10, engine=engine)
+                if not papers:
+                    papers_str = "No papers found."
+                else:
+                    paper_strings = []
+                    for i, paper in enumerate(papers):
+                        paper_strings.append(
+                            f"{i}: {paper['title']}. {paper['authors']}. {paper['venue']}, {paper['year']}.
+Number of citations: {paper['citationCount']}\nAbstract: {paper['abstract']}"
+                        )
+                    papers_str = "\n\n".join(paper_strings)
+
+            except Exception as e:
+                print(f"Error: {e}")
+                continue
+
+        idea["novel"] = novel
+
+        # If not novel, generate revitalization Agents
+        if not novel:
+            print(f"Generating agents to revitalize idea {idx}: {idea['Name']}")
+            msg_hist_agents = []
+            system_msg = make_agent_system_msg.format(
+                task_description=task_description,
+                code=code
+            )
+            user_prompt = make_agent_prompt.format(
+                current_round=1,
+                num_rounds=1,
+                idea=json.dumps(idea),
+                last_query_results=papers_str,
+                thought=thought_output,
+                novelty="not novel"
+            )
+            agent_text, _ = get_response_from_llm(
+                user_prompt,
+                client=client,
+                model=model,
+                system_message=system_msg,
+                msg_history=msg_hist_agents
+            )
+            agents_json = extract_json_between_markers(agent_text)
+            idea["Agents"] = agents_json.get("Agents") if isinstance(agents_json, dict) else None
+
+    # save back
     results_file = osp.join(base_dir, "ideas.json")
     with open(results_file, "w") as f:
         json.dump(ideas, f, indent=4)
