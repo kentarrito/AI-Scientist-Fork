@@ -313,7 +313,18 @@ def extract_json_between_markers(llm_output):
 
     return None  # No valid JSON found
 
+def extract_text_inside_backticks(text, arbitrary_text):
+    # Define the pattern to match the text inside ``` that follows the arbitrary text
+    pattern = re.compile(r'```{}\s*([\s\S]*?)\s*```'.format(re.escape(arbitrary_text)))
 
+    # Search for the pattern in the text
+    match = pattern.search(text)
+
+    if match:
+        return match.group(1).strip()
+    else:
+        return None
+            
 def create_client(model):
     if model.startswith("claude-"):
         print(f"Using Anthropic API with model {model}.")
