@@ -643,8 +643,12 @@ def check_idea_novelty(
 
         idea["novel"] = novel
 
+        print()
+        print(f"novelty: {novel}")
+
         # If not novel, generate revitalization Agents
         if not novel:
+            print()
             print(f"Generating agents to revitalize idea {idx}: {idea['Name']}")
             msg_hist_agents = []
             system_msg = make_agent_system_msg.format(
@@ -668,6 +672,9 @@ def check_idea_novelty(
             )
             agents_json = extract_json_between_markers(agent_text)
             idea["Agents"] = agents_json.get("Agents") if isinstance(agents_json, dict) else None
+
+            print()
+            print(f"Generated agents: {idea["Agents"]}")
 
     # save back
     results_file = osp.join(base_dir, "ideas.json")
