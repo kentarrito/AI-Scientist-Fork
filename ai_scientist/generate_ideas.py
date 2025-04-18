@@ -625,8 +625,15 @@ def check_idea_novelty(
                     paper_strings = []
                     for i, paper in enumerate(papers):
                         paper_strings.append(
-                            f"{i}: {paper['title']}. {paper['authors']}. {paper['venue']}, {paper['year']}.
-Number of citations: {paper['citationCount']}\nAbstract: {paper['abstract']}"
+                                """{i}: {title}. {authors}. {venue}, {year}.\nNumber of citations: {cites}\nAbstract: {abstract}""".format(
+                                    i=i,
+                                    title=paper["title"],
+                                    authors=paper["authors"],
+                                    venue=paper["venue"],
+                                    year=paper["year"],
+                                    cites=paper["citationCount"],
+                                    abstract=paper["abstract"],
+                                )
                         )
                     papers_str = "\n\n".join(paper_strings)
 
