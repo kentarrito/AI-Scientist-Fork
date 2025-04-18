@@ -450,15 +450,15 @@ make_agent_prompt = '''## Provided Context
 
 ## Output Format
 ```json
-{
+{{
   "Agents": [
-    {
+    {{
       "name": "<AgentName>",
       "focus": "<What to explore>"
-    },
+    }},
     ...
   ]
-}
+}}
 ```
 
 Let's think step by step following each step of the instructions.'''
