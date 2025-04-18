@@ -453,15 +453,15 @@ make_agent_prompt = '''
 
 **Response Format (strict JSON):**
 ```json
-{
+{{
   "Agents": [
-    {
+    {{
       "name": "<AgentName>",
       "focus": "<What to explore>"
-    },
+    }},
     ...
   ]
-}
+}}
 ```'''
 
 '''
