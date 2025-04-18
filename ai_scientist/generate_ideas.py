@@ -405,64 +405,61 @@ This JSON will be automatically parsed, so ensure the format is precise.'''
 
 
 
-make_agent_system_msg = """
-You are a meticulous AI researcher (PhD level) tasked with revitalizing ideas that failed the novelty check. The literature survey is complete—you know this idea overlaps existing work. Your mission is:
+make_agent_system_msg = """You are a meticulous AI researcher (PhD level) tasked with revitalizing ideas that failed the novelty check. The literature survey is complete—you know this idea overlaps existing work. Your mission is to analyze why the idea lacked novelty, suggest concrete improvements, and define agent-based modules to explore promising new directions. Respond your answer following the instructions."""
 
-1. **Analyze Why**: Clearly diagnose the core reasons the idea wasn’t novel (e.g., already solved problem, incremental variation, well-trodden methods).
-2. **Provide Insight**: Recommend concrete avenues—new dimensions, methodologies, applications, or domain shifts—that could turn it into a standout contribution.
-3. **Define Agents**: Propose a set of Agents (analysis modules or search strategies) that will explore these avenues. For each Agent, specify:
-   - **name**: a concise label
-   - **focus**: what aspect it addresses
+make_agent_prompt = '''## Instructions
 
-Use the following context when advising:
+1. Reflect briefly on the shortcomings that caused the idea to fail the novelty check. These may include reasons such as: already-solved problems, incremental variations, or reliance on well-trodden methods.
+2. Based on this diagnosis, design 3 to 5 specialized Agents that address these shortcomings and explore new, promising dimensions.
+3. For each Agent, clearly specify:
+   - **name**: a short identifier for the Agent
+   - **focus**: the diagnostic or creative angle the Agent will explore (e.g., new application area, new method, underexplored dataset, etc.)
+4. Use the context provided below to guide your reasoning.
 
+## Provided Context
+
+### Task Description
 {task_description}
 
+### Experiment Harness
 ```python
 # experiment harness
 <experiment.py>
 {code}
 </experiment.py>
-```"""
+```
 
-make_agent_prompt = '''
-=== Round {current_round} of {num_rounds} ===
-
-**Proposed Idea:**
+### Idea from Round {current_round} of {num_rounds}
 """
 {idea}
 """
 
-**Previous Search Results:**
+### Previous Search Results
 """
 {last_query_results}
 """
 
-**Previous Analysis:**
+### Previous Analysis
 - THOUGHT:
   """{thought}"""
 - NOVELTY JUDGMENT:
   """{novelty}"""
 
-**Your Task This Round:**
-1. **Reflect** briefly on the diagnosed shortcomings.
-2. **Design** 3–5 specialized Agents to address each shortcoming and explore novel dimensions.
-3. **Outline** for each Agent:
-   - **name**: short identifier
-   - **focus**: diagnostic or creative angle
-
-**Response Format (strict JSON):**
+## Output Format
+Enclose your answer in a JSON code block like below:
 ```json
-{{
+{
   "Agents": [
-    {{
+    {
       "name": "<AgentName>",
       "focus": "<What to explore>"
-    }},
+    },
     ...
   ]
-}}
-```'''
+}
+```
+
+Let's think step by step following the instructions.'''
 
 '''
 def check_idea_novelty(
@@ -651,11 +648,10 @@ def check_idea_novelty(
             print()
             print(f"Generating agents to revitalize idea {idx}: {idea['Name']}")
             msg_hist_agents = []
-            system_msg = make_agent_system_msg.format(
-                task_description=task_description,
-                code=code
-            )
+            system_msg = make_agent_system_msg
             user_prompt = make_agent_prompt.format(
+                task_description=task_description,
+                code=code,
                 current_round=1,
                 num_rounds=1,
                 idea=json.dumps(idea),
