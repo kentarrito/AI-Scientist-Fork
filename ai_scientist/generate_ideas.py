@@ -448,15 +448,15 @@ make_agent_prompt = '''## Instructions
 ## Output Format
 Enclose your answer in a JSON code block like below:
 ```json
-{
+{{
   "Agents": [
-    {
+    {{
       "name": "<AgentName>",
       "focus": "<What to explore>"
-    },
+    }},
     ...
   ]
-}
+}}
 ```
 
 Let's think step by step following the instructions.'''
