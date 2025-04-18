@@ -407,16 +407,7 @@ This JSON will be automatically parsed, so ensure the format is precise.'''
 
 make_agent_system_msg = """You are a meticulous AI researcher (PhD level) tasked with revitalizing ideas that failed the novelty check. The literature survey is complete—you know this idea overlaps existing work. Your mission is to analyze why the idea lacked novelty, suggest concrete improvements, and define agent-based modules to explore promising new directions. Respond your answer following the instructions."""
 
-make_agent_prompt = '''## Instructions
-
-1. Reflect briefly on the shortcomings that caused the idea to fail the novelty check. These may include reasons such as: already-solved problems, incremental variations, or reliance on well-trodden methods.
-2. Based on this diagnosis, design 3 to 5 specialized Agents that address these shortcomings and explore new, promising dimensions.
-3. For each Agent, clearly specify:
-   - **name**: a short identifier for the Agent
-   - **focus**: the diagnostic or creative angle the Agent will explore (e.g., new application area, new method, underexplored dataset, etc.)
-4. Use the context provided below to guide your reasoning.
-
-## Provided Context
+make_agent_prompt = '''## Provided Context
 
 ### Task Description
 {task_description}
@@ -445,21 +436,32 @@ make_agent_prompt = '''## Instructions
 - NOVELTY JUDGMENT:
   """{novelty}"""
 
+
+## Instructions
+
+1. Reflect briefly on the shortcomings that caused the idea to fail the novelty check. These may include reasons such as: already-solved problems, incremental variations, or reliance on well-trodden methods.
+2. Based on this diagnosis, design 3 to 5 specialized Agents that address these shortcomings and explore new, promising dimensions.
+3. For each Agent, clearly specify:
+   - **name**: a short identifier for the Agent
+   - **focus**: the diagnostic or creative angle the Agent will explore (e.g., new application area, new method, underexplored dataset, etc.)
+4. Use the context provided above to guide your reasoning.
+5. Answer your output enclosing it in a JSON code block like output format below
+
+
 ## Output Format
-Enclose your answer in a JSON code block like below:
 ```json
-{{
+{
   "Agents": [
-    {{
+    {
       "name": "<AgentName>",
       "focus": "<What to explore>"
-    }},
+    },
     ...
   ]
-}}
+}
 ```
 
-Let's think step by step following the instructions.'''
+Let's think step by step following each step of the instructions.'''
 
 '''
 def check_idea_novelty(
