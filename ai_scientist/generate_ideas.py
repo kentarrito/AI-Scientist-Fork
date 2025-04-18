@@ -674,12 +674,16 @@ def check_idea_novelty(
             idea["Agents"] = agents_json.get("Agents") if isinstance(agents_json, dict) else None
 
             print()
-            print(f"Generated agents: {idea["Agents"]}")
+            print(f"Generated agents: {idea['Agents']}")
 
     # save back
     results_file = osp.join(base_dir, "ideas.json")
+    print()
+    print("results_file: ", results_file)
     with open(results_file, "w") as f:
         json.dump(ideas, f, indent=4)
+    print()
+    print("File Saved")
 
     return ideas
 
