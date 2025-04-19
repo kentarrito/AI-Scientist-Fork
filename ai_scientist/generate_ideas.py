@@ -671,8 +671,10 @@ def check_idea_novelty(
 
             print()
             print("agent_text: ", agent_text)
-                
-            agents_json = extract_json_between_markers(agent_text)
+
+            import json
+            agents_json = json.loads(agent_text)
+            #agents_json = extract_json_between_markers(agent_text)
             idea["Agents"] = agents_json.get("Agents") if isinstance(agents_json, dict) else None
 
             print()
