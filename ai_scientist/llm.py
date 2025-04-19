@@ -296,6 +296,15 @@ def extract_json_between_markers(llm_output):
         json_pattern = r"\{.*?\}"
         matches = re.findall(json_pattern, llm_output, re.DOTALL)
 
+    if not matches:
+        try:
+            # Remove invalid control characters
+            json_string_clean = re.sub(r"[\x00-\x1F\x7F]", "", llm_output)
+            parsed_json = json.loads(json_string_clean)
+            return parsed_json
+        except json.JSONDecodeError:
+            pass  # Try next match
+
     for json_string in matches:
         json_string = json_string.strip()
         try:
