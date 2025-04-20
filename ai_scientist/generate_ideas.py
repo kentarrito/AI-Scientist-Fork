@@ -725,11 +725,15 @@ def check_idea_novelty_and_make_agents(
             print("agent_text: ", agent_text)
 
             agents_json = json.loads(agent_text)
+            agents = agents_json.get("Agents")
             #agents_json = extract_json_between_markers(agent_text)
             idea["Agents"] = agents_json.get("Agents") if isinstance(agents_json, dict) else None
 
             print()
             print(f"Generated agents: {idea['Agents']}")
+
+        else:
+            agents = []
 
     # save back
     results_file = osp.join(base_dir, "ideas.json")
@@ -740,7 +744,7 @@ def check_idea_novelty_and_make_agents(
     print()
     print("File Saved")
 
-    return ideas
+    return ideas, agents
 
 
 if __name__ == "__main__":
