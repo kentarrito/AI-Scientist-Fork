@@ -608,7 +608,6 @@ def check_idea_novelty(
 
     return ideas
 '''
-generate_ideas_with_brainstorming, check_idea_novelty_and_make_agents
 
 def check_idea_novelty_and_make_agents(
         ideas,
