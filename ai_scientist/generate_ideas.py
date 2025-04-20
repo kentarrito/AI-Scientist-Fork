@@ -11,6 +11,30 @@ from ai_scientist.llm import get_response_from_llm, extract_json_between_markers
 
 S2_API_KEY = os.getenv("S2_API_KEY")
 
+brainstorming_prompt = """{task_description}
+<experiment.py>
+{code}
+</experiment.py>
+
+Here are the brainstorming that you have already made before:
+
+'''
+{brainstorming_history}
+'''
+
+Try to expand your thoughts and question about this topic following the agents below. 
+{agents}
+
+Respond in the following format:
+
+BRAINSTORMING:
+```text
+<TEXT>
+```
+
+In <TEXT>, try to expand your thoughts about the topic.
+"""
+
 idea_first_prompt = """{task_description}
 <experiment.py>
 {code}
@@ -22,9 +46,14 @@ Here are the ideas that you have already generated:
 {prev_ideas_string}
 '''
 
-Come up with the next impactful and creative idea for research experiments and directions you can feasibly investigate with the code provided.
-Note that you will not have access to any additional resources or datasets.
-Make sure any idea is not overfit the specific training dataset or model, and has wider significance.
+Here is some additional brainstorming to guide your creativity:
+
+'''
+{brainstorming}
+'''
+
+Using the above brainstorming as inspiration, come up with the next impactful and creative idea for research experiments and directions you can feasibly investigate with the code provided. Draw clear connections between your idea and the brainstormed insights where possible.  
+Note that you will not have access to any additional resources or datasets. Make sure any idea is not overfit to the specific training dataset or model, and has wider significance.
 
 Respond in the following format:
 
@@ -73,8 +102,10 @@ ONLY INCLUDE "I am done" IF YOU ARE MAKING NO MORE CHANGES."""
 
 
 # GENERATE IDEAS
-def generate_ideas(
+def generate_ideas_with_brainstorming(
         base_dir,
+        agents,
+        brainstorming_history,
         client,
         model,
         skip_generation=False,
@@ -117,11 +148,33 @@ def generate_ideas(
 
             msg_history = []
             print(f"Iteration 1/{num_reflections}")
+
+            print("Brainstorming...")
+            text, msg_history_ = get_response_from_llm(
+                brainstorming_prompt.format(
+                    task_description=prompt["task_description"],
+                    agents=agents,
+                    brainstorming_history=brainstorming_history,
+                    code=code,
+                    prev_ideas_string=prev_ideas_string,
+                    num_reflections=num_reflections,
+                ),
+                client=client,
+                model=model,
+                system_message=idea_system_prompt,
+                msg_history=msg_history,
+            )
+
+            brainstorming = extract_text_inside_backticks(text, "text")
+            brainstorming_history += brainstorming
+
+            print("Generating Ideas...")
             text, msg_history = get_response_from_llm(
                 idea_first_prompt.format(
                     task_description=prompt["task_description"],
                     code=code,
                     prev_ideas_string=prev_ideas_string,
+                    brainstorming=brainstorming,
                     num_reflections=num_reflections,
                 ),
                 client=client,
@@ -171,17 +224,17 @@ def generate_ideas(
     with open(osp.join(base_dir, "ideas.json"), "w") as f:
         json.dump(ideas, f, indent=4)
 
-    return ideas
+    return ideas, brainstorming_history
 
 
 # GENERATE IDEAS OPEN-ENDED
 def generate_next_idea(
-        base_dir,
-        client,
-        model,
-        prev_idea_archive=[],
-        num_reflections=5,
-        max_attempts=10,
+    base_dir,
+    client,
+    model,
+    prev_idea_archive=[],
+    num_reflections=5,
+    max_attempts=10,
 ):
     idea_archive = prev_idea_archive
     original_archive_size = len(idea_archive)
@@ -555,9 +608,9 @@ def check_idea_novelty(
 
     return ideas
 '''
+generate_ideas_with_brainstorming, check_idea_novelty_and_make_agents
 
-
-def check_idea_novelty(
+def check_idea_novelty_and_make_agents(
         ideas,
         base_dir,
         client,
