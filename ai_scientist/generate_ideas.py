@@ -166,6 +166,8 @@ def generate_ideas_with_brainstorming(
             )
 
             brainstorming = extract_text_inside_backticks(text, "text")
+            print(brainstorming)
+            print()
 
             print("Generating Ideas...")
             text, msg_history = get_response_from_llm(
