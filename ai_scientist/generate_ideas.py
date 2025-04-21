@@ -611,6 +611,7 @@ def check_idea_novelty_and_make_agents(
         base_dir,
         client,
         model,
+        n_bs_step,
         max_num_iterations=10,
         engine="semanticscholar",
 ):
@@ -733,8 +734,11 @@ def check_idea_novelty_and_make_agents(
             agents = []
 
     print()
+    print()
     print("Novelty check Finished")
+    print(f"Brainstorming Step: {n_bs_step}")
     print(f"{n_novels} / {n_ideas} Novel")
+    print()
     # save back
     results_file = osp.join(base_dir, "ideas.json")
     print()
