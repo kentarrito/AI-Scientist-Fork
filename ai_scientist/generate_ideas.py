@@ -620,6 +620,8 @@ def check_idea_novelty_and_make_agents(
         prompt = json.load(f)
         task_description = prompt["task_description"]
 
+    n_ideas = len(ideas)
+    n_novels = 0
     for idx, idea in enumerate(ideas):
         if "novel" in idea:
             print(f"Skipping idea {idx}, already checked.")
@@ -690,6 +692,7 @@ def check_idea_novelty_and_make_agents(
                 continue
 
         idea["novel"] = novel
+        if novel: n_novels += 1
 
         print()
         print(f"novelty: {novel}")
@@ -729,6 +732,9 @@ def check_idea_novelty_and_make_agents(
         else:
             agents = []
 
+    print()
+    print("Novelty check Finished")
+    print(f"{n_novels} / {n_ideas} Novel")
     # save back
     results_file = osp.join(base_dir, "ideas.json")
     print()
