@@ -716,9 +716,6 @@ def check_idea_novelty_and_make_agents(
                 msg_history=msg_hist_agents
             )
 
-            print()
-            print("agent_text: ", agent_text)
-
             agents_json = json.loads(agent_text)
             agents = agents_json.get("brainstormings")
             #agents_json = extract_json_between_markers(agent_text)
