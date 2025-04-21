@@ -166,7 +166,6 @@ def generate_ideas_with_brainstorming(
             )
 
             brainstorming = extract_text_inside_backticks(text, "text")
-            brainstorming_history += brainstorming
 
             print("Generating Ideas...")
             text, msg_history = get_response_from_llm(
@@ -215,6 +214,8 @@ def generate_ideas_with_brainstorming(
         except Exception as e:
             print(f"Failed to generate idea: {e}")
             continue
+
+    brainstorming_history += brainstorming
 
     ## SAVE IDEAS
     ideas = []
