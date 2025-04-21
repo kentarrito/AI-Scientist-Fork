@@ -458,7 +458,7 @@ This JSON will be automatically parsed, so ensure the format is precise.'''
 
 
 
-make_agent_system_msg = """You are a meticulous AI researcher (PhD level) tasked with revitalizing ideas that failed the novelty check. The literature survey is complete—you know this idea overlaps existing work. Your mission is to analyze why the idea lacked novelty, suggest concrete improvements, and define agent-based modules to explore promising new directions. Respond your answer following the instructions."""
+make_agent_system_msg = """You are a meticulous AI researcher (PhD level) tasked with revitalizing ideas that failed the novelty check. The literature survey is complete—you know this idea overlaps existing work. Your mission is to analyze why the idea lacked novelty, suggest concrete improvements, and define brainstorming sentences to explore promising new directions. Respond your answer following the instructions."""
 
 make_agent_prompt = '''## Provided Context
 
@@ -489,26 +489,20 @@ make_agent_prompt = '''## Provided Context
 - NOVELTY JUDGMENT:
   """{novelty}"""
 
-
 ## Instructions
 
 1. Reflect briefly on the shortcomings that caused the idea to fail the novelty check. These may include reasons such as: already-solved problems, incremental variations, or reliance on well-trodden methods.
-2. Based on this diagnosis, design 3 to 5 specialized Agents that address these shortcomings and explore new, promising dimensions.
-3. For each Agent, clearly specify:
-   - **name**: a short identifier for the Agent
-   - **focus**: the diagnostic or creative angle the Agent will explore (e.g., new application area, new method, underexplored dataset, etc.)
-4. Use the context provided above to guide your reasoning.
-5. Answer your output enclosing it in a JSON code block like output format below
+2. Based on this diagnosis, design 3 to 5 brainstorming sentences that address these shortcomings and explore new, promising dimensions. For each sentence, clearly specify:
+   - **brainstorming sentence**: a short sentence for the brainstorming. 
+Example of brainstorming sentence: "Let's think why this phenomena happened".
+3. Answer your output enclosing it in a JSON code block like output format below.
 
 
 ## Output Format
 ```json
 {{
-  "Agents": [
-    {{
-      "name": "<AgentName>",
-      "focus": "<What to explore>"
-    }},
+  "brainstormings": [
+    "<BrainstormingSentence>",
     ...
   ]
 }}
@@ -725,9 +719,9 @@ def check_idea_novelty_and_make_agents(
             print("agent_text: ", agent_text)
 
             agents_json = json.loads(agent_text)
-            agents = agents_json.get("Agents")
+            agents = agents_json.get("brainstormings")
             #agents_json = extract_json_between_markers(agent_text)
-            idea["Agents"] = agents_json.get("Agents") if isinstance(agents_json, dict) else None
+            idea["Agents"] = agents_json.get("brainstormings") if isinstance(agents_json, dict) else None
 
             print()
             print(f"Generated agents: {idea['Agents']}")
