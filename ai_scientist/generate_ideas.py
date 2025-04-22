@@ -147,7 +147,6 @@ def generate_ideas_with_brainstorming(
             prev_ideas_string = "\n\n".join(idea_str_archive)
 
             msg_history = []
-            print(f"Iteration 1/{num_reflections}")
 
             print("Brainstorming...")
             text, msg_history_ = get_response_from_llm(
@@ -169,6 +168,7 @@ def generate_ideas_with_brainstorming(
             print(brainstorming)
             print()
 
+            
             print("Generating Ideas...")
             text, msg_history = get_response_from_llm(
                 idea_first_prompt.format(
@@ -186,12 +186,13 @@ def generate_ideas_with_brainstorming(
             ## PARSE OUTPUT
             json_output = extract_json_between_markers(text)
             assert json_output is not None, "Failed to extract JSON from LLM output"
+            print()
+            print(f"Iteration 1/{num_reflections} Generated Ideas: ")
             print(json_output)
 
             # Iteratively improve task.
             if num_reflections > 1:
                 for j in range(num_reflections - 1):
-                    print(f"Iteration {j + 2}/{num_reflections}")
                     text, msg_history = get_response_from_llm(
                         idea_reflection_prompt.format(
                             current_round=j + 2, num_reflections=num_reflections
@@ -206,9 +207,12 @@ def generate_ideas_with_brainstorming(
                     assert (
                             json_output is not None
                     ), "Failed to extract JSON from LLM output"
+                    print()
+                    print(f"Iteration {j + 2}/{num_reflections} Generated Ideas: ")
                     print(json_output)
 
                     if "I am done" in text:
+                        print()
                         print(f"Idea generation converged after {j + 2} iterations.")
                         break
 
@@ -725,10 +729,10 @@ def check_idea_novelty_and_make_agents(
             agents_json = json.loads(agent_text)
             agents = agents_json.get("brainstormings")
             #agents_json = extract_json_between_markers(agent_text)
-            idea["Agents"] = agents_json.get("brainstormings") if isinstance(agents_json, dict) else None
+            idea["bs_agents"] = agents_json.get("brainstormings") if isinstance(agents_json, dict) else None
 
             print()
-            print(f"Generated agents: {idea['Agents']}")
+            print(f"Generated agents: {idea['bs_agents']}")
 
         else:
             agents = []
@@ -740,11 +744,22 @@ def check_idea_novelty_and_make_agents(
     print(f"{n_novels} / {n_ideas} Novel")
     print()
     # save back
-    results_file = osp.join(base_dir, "ideas.json")
+    results_file = osp.join(base_dir, "novelty_result.json")
     print()
     print("results_file: ", results_file)
+    if os.path.exists(results_file):
+        with open(results_file) as f:
+            novelty_result = json.load(f)
+    else:
+        novelty_result = {}
+    novelty_result[f"Brainstorming Step {n_bs_step}"] = {"n_novels":n_novels, "n_ideas":n_ideas}
     with open(results_file, "w") as f:
-        json.dump(ideas, f, indent=4)
+        json.dump(novelty_result, f, indent=4)
+
+    results_file = osp.join(base_dir, "bs_prompts.json")
+    bs_prompts = {"brainstorming_prompt":brainstorming_prompt, "idea_first_prompt":idea_first_prompt, "make_agent_system_msg":make_agent_system_msg, "make_agent_prompt":make_agent_prompt}
+    with open(results_file, "w") as f:
+        json.dump(bs_prompts, f, indent=4)
     print()
     print("File Saved")
 
