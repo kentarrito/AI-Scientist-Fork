@@ -110,7 +110,7 @@ ONLY INCLUDE "I am done" IF YOU ARE MAKING NO MORE CHANGES."""
 def generate_ideas_with_brainstorming(
         base_dir,
         agents,
-        brainstorming_history,
+        bs_msg_history,
         client,
         model,
         skip_generation=False,
@@ -145,48 +145,30 @@ def generate_ideas_with_brainstorming(
 
     idea_system_prompt = prompt["system"]
 
+    print()
+    print(f"Generating idea {_ + 1}/{max_num_generations}")
+    msg_history = []
+    bs_msg_history = []
+    print("Brainstorming...")
+    for i_bs in range(3):
+        text, bs_msg_history = get_response_from_llm(
+            agents[i_bs],
+            client=client,
+            model=model,
+            system_message=brainstorming_system_msg.format(
+                task_description=prompt["task_description"],
+                code=code,
+            ),
+            msg_history=bs_msg_history,
+        )
+    print("bs_msg_history:")
+    print(bs_msg_history)
+    print()
+
     for _ in range(max_num_generations):
-        print()
-        print(f"Generating idea {_ + 1}/{max_num_generations}")
-        msg_history = []
-        bs_msg_history = []
-        print("Brainstorming...")
-        for i_bs in range(3):
-            text, bs_msg_history = get_response_from_llm(
-                brainstorming_system_msg.format(
-                    task_description=prompt["task_description"],
-                    code=code,
-                ),
-                client=client,
-                model=model,
-                system_message=brainstorming_system_msg.format(
-                    task_description=prompt["task_description"],
-                    code=code,
-                ),
-                msg_history=bs_msg_history,
-            )
+        
         try:
             prev_ideas_string = "\n\n".join(idea_str_archive)
-            
-            text, msg_history_ = get_response_from_llm(
-                brainstorming_prompt.format(
-                    task_description=prompt["task_description"],
-                    agents=agents,
-                    brainstorming_history=bs_msg_history,
-                    code=code,
-                    prev_ideas_string=prev_ideas_string,
-                    num_reflections=num_reflections,
-                ),
-                client=client,
-                model=model,
-                system_message=idea_system_prompt,
-                msg_history=msg_history,
-            )
-
-            brainstorming = extract_text_inside_backticks(text, "text")
-            print(brainstorming)
-            print()
-
             
             print("Generating Ideas...")
             text, msg_history = get_response_from_llm(
@@ -194,7 +176,7 @@ def generate_ideas_with_brainstorming(
                     task_description=prompt["task_description"],
                     code=code,
                     prev_ideas_string=prev_ideas_string,
-                    brainstorming=brainstorming,
+                    brainstorming=bs_msg_history,
                     num_reflections=num_reflections,
                 ),
                 client=client,
@@ -240,8 +222,6 @@ def generate_ideas_with_brainstorming(
             print(f"Failed to generate idea: {e}")
             continue
 
-    brainstorming_history += brainstorming
-
     ## SAVE IDEAS
     ideas = []
     for idea_str in idea_str_archive:
@@ -250,7 +230,7 @@ def generate_ideas_with_brainstorming(
     with open(osp.join(base_dir, "ideas.json"), "w") as f:
         json.dump(ideas, f, indent=4)
 
-    return ideas, brainstorming_history
+    return ideas, bs_msg_history
 
 
 # GENERATE IDEAS OPEN-ENDED
