@@ -2,6 +2,7 @@ import json
 import os
 import os.path as osp
 import time
+import random
 from typing import List, Dict, Union
 
 import backoff
@@ -149,9 +150,10 @@ def generate_ideas_with_brainstorming(
     msg_history = []
     bs_msg_history = []
     print("Brainstorming...")
+    chosen_agents = random.sample(agents, 3)
     for i_bs in range(3):
         text, bs_msg_history = get_response_from_llm(
-            agents[i_bs],
+            chosen_agents[i_bs],
             client=client,
             model=model,
             system_message=brainstorming_system_msg.format(
