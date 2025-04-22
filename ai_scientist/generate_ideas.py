@@ -110,7 +110,7 @@ ONLY INCLUDE "I am done" IF YOU ARE MAKING NO MORE CHANGES."""
 def generate_ideas_with_brainstorming(
         base_dir,
         agents,
-        bs_msg_history,
+        brainstorming_history,
         client,
         model,
         skip_generation=False,
