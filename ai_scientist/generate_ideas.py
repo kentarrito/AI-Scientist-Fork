@@ -11,10 +11,15 @@ from ai_scientist.llm import get_response_from_llm, extract_json_between_markers
 
 S2_API_KEY = os.getenv("S2_API_KEY")
 
-brainstorming_prompt = """{task_description}
+brainstorming_system_msg = """You are super genius and try to brainstorm to make a novel idea on the task below. Brainstorm and think of many thoughts following the user's insturuction.
+
+{task_description}
 <experiment.py>
 {code}
 </experiment.py>
+"""
+
+brainstorming_prompt = """
 
 Here are the brainstorming that you have already made before:
 
@@ -143,17 +148,31 @@ def generate_ideas_with_brainstorming(
     for _ in range(max_num_generations):
         print()
         print(f"Generating idea {_ + 1}/{max_num_generations}")
+        msg_history = []
+        bs_msg_history = []
+        print("Brainstorming...")
+        for i_bs in range(3):
+            text, bs_msg_history = get_response_from_llm(
+                brainstorming_system_msg.format(
+                    task_description=prompt["task_description"],
+                    code=code,
+                ),
+                client=client,
+                model=model,
+                system_message=brainstorming_system_msg.format(
+                    task_description=prompt["task_description"],
+                    code=code,
+                ),
+                msg_history=bs_msg_history,
+            )
         try:
             prev_ideas_string = "\n\n".join(idea_str_archive)
-
-            msg_history = []
-
-            print("Brainstorming...")
+            
             text, msg_history_ = get_response_from_llm(
                 brainstorming_prompt.format(
                     task_description=prompt["task_description"],
                     agents=agents,
-                    brainstorming_history=brainstorming_history,
+                    brainstorming_history=bs_msg_history,
                     code=code,
                     prev_ideas_string=prev_ideas_string,
                     num_reflections=num_reflections,
