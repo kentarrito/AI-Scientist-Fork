@@ -146,7 +146,6 @@ def generate_ideas_with_brainstorming(
     idea_system_prompt = prompt["system"]
 
     print()
-    print(f"Generating idea {_ + 1}/{max_num_generations}")
     msg_history = []
     bs_msg_history = []
     print("Brainstorming...")
@@ -170,7 +169,7 @@ def generate_ideas_with_brainstorming(
         try:
             prev_ideas_string = "\n\n".join(idea_str_archive)
             
-            print("Generating Ideas...")
+            print(f"Generating idea {_ + 1}/{max_num_generations} ...")
             text, msg_history = get_response_from_llm(
                 idea_first_prompt.format(
                     task_description=prompt["task_description"],
