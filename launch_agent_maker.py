@@ -386,7 +386,7 @@ if __name__ == "__main__":
             json.dump(pre_agents, f, indent=4)
 
         all_agents += new_agents
-        pre_agents = new_agents
+        #pre_agents = new_agents
 
     with open(osp.join(base_dir, f"all_agents.json"), "w") as f:
         json.dump(all_agents, f, indent=4)
