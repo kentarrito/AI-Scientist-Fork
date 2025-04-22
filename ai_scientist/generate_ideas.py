@@ -485,7 +485,7 @@ make_agent_prompt = '''## Provided Context
 {idea}
 """
 
-### Previous Search Results
+### Relevant papers
 """
 {last_query_results}
 """
@@ -498,14 +498,11 @@ make_agent_prompt = '''## Provided Context
 
 ## Instructions
 
-1. Reflect briefly on the shortcomings that caused the idea to fail the novelty check. These may include reasons such as: already-solved problems, incremental variations, or reliance on well-trodden methods.
-2. Based on this diagnosis, design 3 to 5 brainstorming sentences that address these shortcomings and explore new, promising dimensions. For each sentence, clearly specify:
-   - **brainstorming sentence**: a short sentence for the brainstorming. 
-Example of brainstorming sentence: "Let's think why this phenomena happened".
-3. Answer your output enclosing it in a JSON code block like output format below.
+1. **Think Why Idea was not Novel**: Refering to relevant papers which are already published, think why the idea was not novel. 
+2. **Think How the Idea Can Be More Novel**: Imagine as many thinking processes as possible which may have led to more novel idea. For example, "Thinking about why the issue occured might have led to an idea which tackled more general and bigger problem in this field".
+3. **Give Short and Abstract Brainstorming Sentences**: Expanding your imagination, design 3 to 5 brainstorming sentences that may lead more novel idea. All the setences should be abstract and general so that it can be applied to other papers too. These are the examples of the instructions; “Explore all the possibilities of other ideas”, “Check if there are enough conditions to solve an issue”, “Imagine what condition will lead you to solve the issue”
+4. **Generate Output**: Based on the result so far, answer your output enclosing it in a JSON code block like output format below
 
-
-## Output Format
 ```json
 {{
   "brainstormings": [
