@@ -277,6 +277,7 @@ def generate_bs_agents_dataset(
     print("Brainstorming...")
     chosen_agents = random.sample(agents, 3)
     bs_msg_histories = {}
+    all_ideas = {}
     for i_bs, agent in enumerate(chosen_agents):
         for j_bs in range(2):
             # for branch 0 start empty; otherwise continue from previous branch
@@ -299,7 +300,7 @@ def generate_bs_agents_dataset(
             bs_msg_histories[(i_bs, j_bs)] = updated_history
 
             for _ in range(max_num_generations):
-                
+                msg_history=[]
                 try:
                     prev_ideas_string = "\n\n".join(idea_str_archive)
                     
@@ -351,19 +352,21 @@ def generate_bs_agents_dataset(
                                 break
         
                     idea_str_archive.append(json.dumps(json_output))
+                    all_ideas[(i_bs, j_bs)] = json.loads(json.dumps(json_output))
+                        
                 except Exception as e:
                     print(f"Failed to generate idea: {e}")
                     continue
 
     ## SAVE IDEAS
-    ideas = []
-    for idea_str in idea_str_archive:
-        ideas.append(json.loads(idea_str))
 
-    with open(osp.join(base_dir, "ideas.json"), "w") as f:
-        json.dump(ideas, f, indent=4)
+    with open(osp.join(base_dir, "all_ideas.json"), "w") as f:
+        json.dump(all_ideas, f, indent=4)
 
-    return ideas, bs_msg_history
+    with open(osp.join(base_dir, "bs_msg_histories.json"), "w") as f:
+        json.dump(bs_msg_histories, f, indent=4)
+
+    return all_ideas, bs_msg_histories
 
 
 # GENERATE IDEAS OPEN-ENDED
