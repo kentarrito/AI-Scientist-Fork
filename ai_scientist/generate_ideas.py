@@ -278,17 +278,19 @@ def generate_bs_agents_dataset(
     bs_msg_history = []
     print("Brainstorming...")
     chosen_agents = random.sample(agents, 3)
+    bs_msg_histories = []
     for i_bs in range(3):
-        text, bs_msg_history = get_response_from_llm(
-            chosen_agents[i_bs],
-            client=client,
-            model=model,
-            system_message=brainstorming_system_msg.format(
-                task_description=prompt["task_description"],
-                code=code,
-            ),
-            msg_history=bs_msg_history,
-        )
+        for j_bs in range(2):
+                text, bs_msg_history = get_response_from_llm(
+                    chosen_agents[i_bs],
+                    client=client,
+                    model=model,
+                    system_message=brainstorming_system_msg.format(
+                        task_description=prompt["task_description"],
+                        code=code,
+                    ),
+                    msg_history=bs_msg_history,
+                )
     print("bs_msg_history:")
     print(bs_msg_history)
     print()
