@@ -274,59 +274,43 @@ def generate_bs_agents_dataset(
     idea_system_prompt = prompt["system"]
 
     print()
-    msg_history = []
-    bs_msg_history = []
     print("Brainstorming...")
     chosen_agents = random.sample(agents, 3)
-    bs_msg_histories = []
-    for i_bs in range(3):
+    bs_msg_histories = {}
+    for i_bs, agent in enumerate(chosen_agents):
         for j_bs in range(2):
-                text, bs_msg_history = get_response_from_llm(
-                    chosen_agents[i_bs],
-                    client=client,
-                    model=model,
-                    system_message=brainstorming_system_msg.format(
-                        task_description=prompt["task_description"],
-                        code=code,
-                    ),
-                    msg_history=bs_msg_history,
-                )
-    print("bs_msg_history:")
-    print(bs_msg_history)
-    print()
+            # for branch 0 start empty; otherwise continue from previous branch
+            msg_history = [] if j_bs == 0 else bs_msg_histories[(i_bs, j_bs - 1)]
 
-    for _ in range(max_num_generations):
-        
-        try:
-            prev_ideas_string = "\n\n".join(idea_str_archive)
-            
-            print(f"Generating idea {_ + 1}/{max_num_generations} ...")
-            text, msg_history = get_response_from_llm(
-                idea_first_prompt.format(
-                    task_description=prompt["task_description"],
-                    code=code,
-                    prev_ideas_string=prev_ideas_string,
-                    brainstorming=bs_msg_history,
-                    num_reflections=num_reflections,
-                ),
+            system_message = brainstorming_system_msg.format(
+                task_description=prompt["task_description"],
+                code=code
+            )
+
+            text, updated_history = get_response_from_llm(
+                agent=agent,
                 client=client,
                 model=model,
-                system_message=idea_system_prompt,
-                msg_history=msg_history,
+                system_message=system_message,
+                msg_history=msg_history
             )
-            ## PARSE OUTPUT
-            json_output = extract_json_between_markers(text)
-            assert json_output is not None, "Failed to extract JSON from LLM output"
-            print()
-            print(f"Iteration 1/{num_reflections} Generated Ideas: ")
-            print(json_output)
 
-            # Iteratively improve task.
-            if num_reflections > 1:
-                for j in range(num_reflections - 1):
+            # Store the history under (agent_idx, branch_idx)
+            bs_msg_histories[(i_bs, j_bs)] = updated_history
+
+            for _ in range(max_num_generations):
+                
+                try:
+                    prev_ideas_string = "\n\n".join(idea_str_archive)
+                    
+                    print(f"Generating idea {_ + 1}/{max_num_generations} ...")
                     text, msg_history = get_response_from_llm(
-                        idea_reflection_prompt.format(
-                            current_round=j + 2, num_reflections=num_reflections
+                        idea_first_prompt.format(
+                            task_description=prompt["task_description"],
+                            code=code,
+                            prev_ideas_string=prev_ideas_string,
+                            brainstorming=bs_msg_history,
+                            num_reflections=num_reflections,
                         ),
                         client=client,
                         model=model,
@@ -335,22 +319,41 @@ def generate_bs_agents_dataset(
                     )
                     ## PARSE OUTPUT
                     json_output = extract_json_between_markers(text)
-                    assert (
-                            json_output is not None
-                    ), "Failed to extract JSON from LLM output"
+                    assert json_output is not None, "Failed to extract JSON from LLM output"
                     print()
-                    print(f"Iteration {j + 2}/{num_reflections} Generated Ideas: ")
+                    print(f"Iteration 1/{num_reflections} Generated Ideas: ")
                     print(json_output)
-
-                    if "I am done" in text:
-                        print()
-                        print(f"Idea generation converged after {j + 2} iterations.")
-                        break
-
-            idea_str_archive.append(json.dumps(json_output))
-        except Exception as e:
-            print(f"Failed to generate idea: {e}")
-            continue
+        
+                    # Iteratively improve task.
+                    if num_reflections > 1:
+                        for j in range(num_reflections - 1):
+                            text, msg_history = get_response_from_llm(
+                                idea_reflection_prompt.format(
+                                    current_round=j + 2, num_reflections=num_reflections
+                                ),
+                                client=client,
+                                model=model,
+                                system_message=idea_system_prompt,
+                                msg_history=msg_history,
+                            )
+                            ## PARSE OUTPUT
+                            json_output = extract_json_between_markers(text)
+                            assert (
+                                    json_output is not None
+                            ), "Failed to extract JSON from LLM output"
+                            print()
+                            print(f"Iteration {j + 2}/{num_reflections} Generated Ideas: ")
+                            print(json_output)
+        
+                            if "I am done" in text:
+                                print()
+                                print(f"Idea generation converged after {j + 2} iterations.")
+                                break
+        
+                    idea_str_archive.append(json.dumps(json_output))
+                except Exception as e:
+                    print(f"Failed to generate idea: {e}")
+                    continue
 
     ## SAVE IDEAS
     ideas = []
