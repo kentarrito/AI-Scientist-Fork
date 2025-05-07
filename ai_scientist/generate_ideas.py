@@ -275,11 +275,20 @@ def generate_bs_agents_dataset(
 
     print()
     print("Brainstorming...")
-    chosen_agents = random.sample(agents, 3)
-    bs_msg_histories = {}
+    num_depth = 3
+    num_branch = 2
+    agents = []
+    #chosen_agents = random.sample(agents, 3)
+    bs_msg_histories = {}  # {(depth,branch):[{"system":}...], ...}
+    bs_agent_id_histories = {}  # {(depth,branch):id, ...}
     all_ideas = {}
-    for i_bs, agent in enumerate(chosen_agents):
-        for j_bs in range(2):
+    for i_bs in range(num_depth):
+        if i_bs==0:
+            chosen_agents = random.sample(agents, 1)
+        else:
+            # need to add code here
+        
+        for j_bs in range(num_branch):
             # for branch 0 start empty; otherwise continue from previous branch
             msg_history = [] if j_bs == 0 else bs_msg_histories[(i_bs, j_bs - 1)]
 
