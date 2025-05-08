@@ -278,10 +278,15 @@ def generate_bs_agents_dataset(
     num_depth = 3
     num_branch = 2
     agents = []
-    #chosen_agents = random.sample(agents, 3)
     bs_msg_histories = {}  # {(depth,branch):[{"system":}...], ...}
     bs_agent_id_histories = {}  # {(depth,branch):id, ...}
     all_ideas = {}
+
+    def add_node(node_ids, agent_ids):
+        # node_ids: id at each depth
+        # agent_ids: agent ids of ancestors
+
+        
         
     for i_bs in range(num_depth):
         for j_bs in range(num_branch):
