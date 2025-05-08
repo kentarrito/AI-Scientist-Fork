@@ -282,13 +282,31 @@ def generate_bs_agents_dataset(
     bs_msg_histories = {}  # {(depth,branch):[{"system":}...], ...}
     bs_agent_id_histories = {}  # {(depth,branch):id, ...}
     all_ideas = {}
-    for i_bs in range(num_depth):
-        if i_bs==0:
-            chosen_agents = random.sample(agents, 1)
-        else:
-            # need to add code here
         
+    for i_bs in range(num_depth):
         for j_bs in range(num_branch):
+
+            # 1️⃣ work out which ids were already used on the current path
+            if i_bs == 0 and j_bs == 0:                        # root
+                ancestor_ids: set[str] = set()
+            elif j_bs == 0:                                    # first branch of a new depth
+                ancestor_ids = bs_agent_id_histories[(i_bs - 1, 0)].copy()
+            else:                                              # continue along branches at same depth
+                ancestor_ids = bs_agent_id_histories[(i_bs, j_bs - 1)].copy()
+
+            # 2️⃣ choose an unused agent
+            available_agents = [a for a in agents if a.id not in ancestor_ids]
+            if not available_agents:
+                raise ValueError(
+                    f"No unused agents left for node ({i_bs}, {j_bs}). "
+                    "Increase the size of `agents` or relax the constraint."
+                )
+            agent = random.choice(available_agents)
+
+            # 3️⃣ update the histories
+            current_path_ids = ancestor_ids | {agent.id}
+            bs_agent_id_histories[(i_bs, j_bs)] = current_path_ids
+            
             # for branch 0 start empty; otherwise continue from previous branch
             msg_history = [] if j_bs == 0 else bs_msg_histories[(i_bs, j_bs - 1)]
 
