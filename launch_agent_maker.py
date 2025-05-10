@@ -374,7 +374,6 @@ if __name__ == "__main__":
             base_dir=base_dir,
             client=client,
             model=client_model,
-            n_bs_step= i,
             engine=args.engine,
         )
 

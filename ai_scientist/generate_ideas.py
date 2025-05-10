@@ -262,7 +262,7 @@ def generate_bs_agents_dataset(
 
         n_agents = len(agents)
 
-        def _grow(node, depth, forbidden, count):
+        def _grow(node, depth, forbidden):
             if depth == num_depth:
                 return
             available = list(set(range(n_agents)) - forbidden)
@@ -282,13 +282,11 @@ def generate_bs_agents_dataset(
                     "children": [],
                 }
                 node["children"].append(child)
-                count += 1
-                #print("node count: ", count)
 
-                _grow(child, depth + 1, forbidden | {a_idx}, count)
+                _grow(child, depth + 1, forbidden | {a_idx})
 
         root = {"agent_id": None, "agent_ids": [], "node_ids": [], "bs_msg": [], "ideas": [], "children": []}
-        _grow(root, 0, set(), 0)
+        _grow(root, 0, set())
         return root
 
     def get_assistant_msg(
@@ -350,7 +348,9 @@ def generate_bs_agents_dataset(
 
     total_num_node = num_branch**(num_depth+1) - 2
 
-    def populate_tree(node, history_so_far, count, **llm_kwargs):
+    global populate_count = 0
+    def populate_tree(node, history_so_far, **llm_kwargs):
+        global populate_count
         """
         Depth-first traversal.
         history_so_far already obeys the 1 + depth*2 rule.
@@ -362,13 +362,13 @@ def generate_bs_agents_dataset(
                 **llm_kwargs,
             )
             next_history = node["bs_msg"]
-            count += 1
-            print(f"populate count: {count}/{total_num_node}")
+            populate_count += 1
+            print(f"populate count: {populate_count}/{total_num_node}")
         else:
             next_history = history_so_far
 
         for child in node["children"]:
-            populate_tree(child, next_history, count, **llm_kwargs)
+            populate_tree(child, next_history, **llm_kwargs)
 
     print()
     print("Making Brainstorming Tree...")
@@ -384,7 +384,6 @@ def generate_bs_agents_dataset(
     populate_tree(
         bs_agent_tree,
         history_so_far = [],      # start empty
-        count = 0,
         prompt         = prompt,
         code           = code,
         client         = client,
@@ -934,7 +933,6 @@ def check_idea_novelty_in_bs_agent_tree(
     base_dir,
     client,
     model,
-    n_bs_step,
     max_num_iterations=10,
     engine="semanticscholar",
 ):
