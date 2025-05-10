@@ -351,12 +351,11 @@ def generate_bs_agents_dataset(
         # talk to LLM *once* (temp_history is a throw-away list)
         temp_history = []
         assistant_txt, temp_history = get_response_from_llm(
-            agent          = agent_id,
+            user_prompt,
             client         = client,
             model          = model,
             system_message = idea_system_prompt,
             msg_history    = temp_history,
-            user_message   = user_prompt,
         )
 
         # append exactly one pair to the running history
