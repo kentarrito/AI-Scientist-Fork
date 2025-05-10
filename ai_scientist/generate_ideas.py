@@ -339,6 +339,7 @@ def generate_bs_agents_dataset(
             idea_prompt,
             client         = client,
             model          = model,
+            system_message = "",
             msg_history    = bs_msg,
         )
 
