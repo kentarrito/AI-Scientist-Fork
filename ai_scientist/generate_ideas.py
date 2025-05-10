@@ -309,13 +309,6 @@ def generate_bs_agents_dataset(
         # ------------------------------------------------------------------ copy
         bs_msg = list(history_so_far)               # preserves ancestor msgs
 
-        # ---------------------------------------------------- inject system once
-        if not any(m["role"] == "system" for m in bs_msg):
-            bs_msg.append({
-                "role": "system",
-                "content": 
-            })
-
         # --------------------------------------------------- construct user turn
 
         bs_sys_msg = brainstorming_system_msg.format(
