@@ -989,7 +989,7 @@ def check_idea_novelty_in_bs_agent_tree(
 
                 # search
                 query = json_output.get("Query", "")
-                papers = search_for_papers(query, result_limit=10, engine=engine)
+                papers = search_for_papers(query, result_limit=5, engine=engine)
                 if not papers:
                     papers_str = "No papers found."
                 else:
