@@ -46,12 +46,6 @@ idea_first_prompt = """{task_description}
 {code}
 </experiment.py>
 
-Here are the ideas that you have already generated:
-
-'''
-{prev_ideas_string}
-'''
-
 Here is some additional brainstorming to guide your creativity:
 
 '''
@@ -350,6 +344,7 @@ def generate_bs_agents_dataset(
         user_prompt = f"[Agent: {agent_id}] " + idea_first_prompt.format(
             task_description = prompt["task_description"],
             code             = code,
+            brainstormings   = bs_msg,
         )
 
         # talk to LLM *once* (temp_history is a throw-away list)
