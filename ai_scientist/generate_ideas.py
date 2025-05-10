@@ -344,7 +344,8 @@ def generate_bs_agents_dataset(
         user_prompt = f"[Agent: {agent_id}] " + idea_first_prompt.format(
             task_description = prompt["task_description"],
             code             = code,
-            brainstorming   = bs_msg,
+            brainstorming    = bs_msg,
+            num_reflections  = num_reflections,
         )
 
         # talk to LLM *once* (temp_history is a throw-away list)
