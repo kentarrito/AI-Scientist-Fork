@@ -362,7 +362,8 @@ def generate_bs_agents_dataset(
                 **llm_kwargs,
             )
             next_history = node["bs_msg"]
-            print("populate count: {count}/{total_num_node}")
+            count += 1
+            print(f"populate count: {count}/{total_num_node}")
         else:
             next_history = history_so_far
 
