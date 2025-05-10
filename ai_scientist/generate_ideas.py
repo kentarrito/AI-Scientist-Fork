@@ -341,6 +341,33 @@ def generate_bs_agents_dataset(
             msg_history    = bs_msg,
         )
 
+        # Iteratively improve task.
+        if num_reflections > 1:
+            for j in range(num_reflections - 1):
+                idea_txt, msg_history = get_response_from_llm(
+                    idea_reflection_prompt.format(
+                        current_round=j + 2, num_reflections=num_reflections
+                    ),
+                    client=client,
+                    model=model,
+                    system_message=idea_system_prompt,
+                    msg_history=msg_history,
+                )
+                ## PARSE OUTPUT
+                json_output = extract_json_between_markers(idea_txt)
+                assert (
+                        json_output is not None
+                ), "Failed to extract JSON from LLM output"
+                #print()
+                #print(f"Iteration {j + 2}/{num_reflections} Generated Ideas: ")
+                #print(json_output)
+
+                if "I am done" in idea_txt:
+                    #print()
+                    #print(f"Idea generation converged after {j + 2} iterations.")
+                    break
+
+
         # parse idea
         idea_json = extract_json_between_markers(idea_txt) or {"idea": idea_txt,
                                                                     "agent": agents[agent_id]}
