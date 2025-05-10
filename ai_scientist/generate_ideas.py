@@ -238,7 +238,6 @@ def generate_ideas_with_brainstorming(
 def generate_bs_agents_dataset(
         base_dir,
         agents,
-        brainstorming_history,
         client,
         model,
         skip_generation=False,
@@ -939,7 +938,7 @@ def check_idea_novelty_and_make_agents(
     print("File Saved")
 
     return ideas, agents
-    
+
 '''
 
 def check_idea_novelty_in_bs_agent_tree(
