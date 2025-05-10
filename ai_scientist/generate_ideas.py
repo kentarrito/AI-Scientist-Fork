@@ -336,7 +336,7 @@ def generate_bs_agents_dataset(
 
         # talk to LLM *once* (temp_history is a throw-away list)
         idea_txt, _ = get_response_from_llm(
-            user_prompt,
+            idea_prompt,
             client         = client,
             model          = model,
             msg_history    = bs_msg,
