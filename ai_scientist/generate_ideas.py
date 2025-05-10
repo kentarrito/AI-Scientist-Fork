@@ -348,7 +348,8 @@ def generate_bs_agents_dataset(
 
     total_num_node = num_branch**(num_depth+1) - 2
 
-    global populate_count = 0
+    global populate_count
+    populate_count = 0
     def populate_tree(node, history_so_far, **llm_kwargs):
         global populate_count
         """
@@ -377,6 +378,8 @@ def generate_bs_agents_dataset(
     bs_agent_tree = build_bs_agent_tree(
         agents, num_depth=num_depth, num_branch=num_branch, seed=42
     )
+
+    print(bs_agent_tree)
 
     print()
     print("Brainstorming and Genrating Ideas...")
