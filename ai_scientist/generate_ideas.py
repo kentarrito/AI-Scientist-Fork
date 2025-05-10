@@ -333,7 +333,7 @@ def generate_bs_agents_dataset(
         )
 
         # talk to LLM *once* (temp_history is a throw-away list)
-        idea_txt, _ = get_response_from_llm(
+        idea_txt, msg_history = get_response_from_llm(
             idea_prompt,
             client         = client,
             model          = model,
@@ -343,6 +343,7 @@ def generate_bs_agents_dataset(
 
         # Iteratively improve task.
         if num_reflections > 1:
+            msg_history = msg_history[-2:]
             for j in range(num_reflections - 1):
                 idea_txt, msg_history = get_response_from_llm(
                     idea_reflection_prompt.format(
