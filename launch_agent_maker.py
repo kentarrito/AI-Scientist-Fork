@@ -15,7 +15,7 @@ from aider.io import InputOutput
 from aider.models import Model
 from datetime import datetime
 
-from ai_scientist.generate_ideas import generate_ideas_with_brainstorming, check_idea_novelty_and_make_agents
+from ai_scientist.generate_ideas import generate_bs_agents_dataset, check_idea_novelty_in_bs_agent_tree
 from ai_scientist.llm import create_client, AVAILABLE_LLMS
 from ai_scientist.perform_experiments import perform_experiments
 from ai_scientist.perform_review import perform_review, load_paper, perform_improvement
@@ -357,44 +357,30 @@ if __name__ == "__main__":
     """
     base_dir = osp.join("templates", args.experiment)
     results_dir = osp.join("results", args.experiment)
-    for i in range(10):
-        all_ideas, bs_msg_histories = generate_bs_agents_dataset(
-            base_dir,
-            agents=pre_agents,
+
+    bs_agent_tree = generate_bs_agents_dataset(
+        base_dir,
+        agents=pre_agents,
+        client=client,
+        model=client_model,
+        skip_generation=args.skip_idea_generation,
+        max_num_generations=args.num_ideas,
+        num_reflections=NUM_REFLECTIONS,
+    )
+
+    if not args.skip_novelty_check:
+        updated_bs_agent_tree = check_idea_novelty_in_bs_agent_tree(
+            bs_agent_tree=bs_agent_tree,
+            base_dir=base_dir,
             client=client,
             model=client_model,
-            skip_generation=args.skip_idea_generation,
-            max_num_generations=args.num_ideas,
-            num_reflections=NUM_REFLECTIONS,
+            n_bs_step= i,
+            engine=args.engine,
         )
-        if not args.skip_novelty_check:
-            ideas, new_agents = check_idea_novelty_and_make_agents(
-                all_ideas,
-                bs_msg_histories=bs_msg_histories,
-                base_dir=base_dir,
-                client=client,
-                model=client_model,
-                n_bs_step= i,
-                engine=args.engine,
-            )
 
-        with open(osp.join(base_dir, f"ideas{i}.json"), "w") as f:
-            json.dump(ideas, f, indent=4)
+    with open(osp.join(base_dir, f"bs_agent_tree.json"), "w") as f:
+        json.dump(bs_agent_tree, f, indent=4)
 
-        with open(osp.join(base_dir, f"agents{i}.json"), "w") as f:
-            json.dump(pre_agents, f, indent=4)
-
-        all_agents += new_agents
-        #pre_agents = new_agents
-
-    with open(osp.join(base_dir, f"all_agents.json"), "w") as f:
-        json.dump(all_agents, f, indent=4)
-
-    with open(osp.join(base_dir, f"brainstorming_history.json"), "w") as f:
-        json.dump(brainstorming_history, f, indent=4)
-
-        # novel_ideas = [idea for idea in ideas if idea["novel"]]
-        # novel_ideas = list(reversed(novel_ideas))
 
 '''
     if args.parallel > 0:

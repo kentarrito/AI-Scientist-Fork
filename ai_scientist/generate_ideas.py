@@ -275,130 +275,141 @@ def generate_bs_agents_dataset(
 
     print()
     print("Brainstorming...")
-    num_depth = 3
-    num_branch = 2
-    agents = []
+    
     bs_msg_histories = {}  # {(depth,branch):[{"system":}...], ...}
     bs_agent_id_histories = {}  # {(depth,branch):id, ...}
     all_ideas = {}
 
-    def add_node(node_ids, agent_ids):
-        # node_ids: id at each depth
-        # agent_ids: agent ids of ancestors
+    num_depth = 3
+    num_branch = 2
+    n_agents = len(agents)
+    bs_agent_tree = {}  # [{"agent_id":, "node_id":[0], "bs_msg":[{"role":"system", "content":"..."}], "ideas":[{}], "children":[{"msg":[{"role":"user"}, {"role":"assistant"}]}]}, ]
 
-        
-        
-    for i_bs in range(num_depth):
-        for j_bs in range(num_branch):
+    def build_bs_agent_tree(agents, *, num_depth=3, num_branch=2, seed=None):
+        if seed is not None:
+            random.seed(seed)
+        if not agents:
+            raise ValueError("agents list is empty.")
 
-            # 1️⃣ work out which ids were already used on the current path
-            if i_bs == 0 and j_bs == 0:                        # root
-                ancestor_ids: set[str] = set()
-            elif j_bs == 0:                                    # first branch of a new depth
-                ancestor_ids = bs_agent_id_histories[(i_bs - 1, 0)].copy()
-            else:                                              # continue along branches at same depth
-                ancestor_ids = bs_agent_id_histories[(i_bs, j_bs - 1)].copy()
+        n_agents = len(agents)
 
-            # 2️⃣ choose an unused agent
-            available_agents = [a for a in agents if a.id not in ancestor_ids]
-            if not available_agents:
-                raise ValueError(
-                    f"No unused agents left for node ({i_bs}, {j_bs}). "
-                    "Increase the size of `agents` or relax the constraint."
+        def _grow(node, depth, forbidden):
+            if depth == num_depth:
+                return
+            available = list(set(range(n_agents)) - forbidden)
+            if not available:
+                raise RuntimeError("Not enough distinct agents for the depth requested.")
+
+            picked_a_idxs = random.sample(available, num_branch)
+            for b in range(num_branch):
+                a_idx = picked_a_idxs[b]
+                child = {
+                    "agent"   : agents[a_idx],
+                    "agent_ids": node["agent_ids"] + [a_idx],
+                    "agent_id": a_idx,
+                    "node_ids" : node["node_ids"] + [b],
+                    "bs_msg"  : [],
+                    "ideas"   : [],
+                    "children": [],
+                }
+                node["children"].append(child)
+                _grow(child, depth + 1, forbidden | {a_idx})
+
+        root = {"agent_id": None, "agent_ids": [], "node_ids": [], "bs_msg": [], "ideas": [], "children": []}
+        _grow(root, 0, set())
+        return root
+
+    def get_assistant_msg(
+        node,
+        *,                          # keyword-only
+        history_so_far,             # ancestor conversation
+        prompt, code,
+        client, model,
+    ):
+        """
+        Returns a *new* history list that is `history_so_far`
+        plus ONE user/assistant pair for this depth,
+        and the parsed idea dict produced in that exchange.
+        """
+        if node["agent_ids"]==[]: agent_id = None
+        else: agent_id = node["agent_ids"][-1]
+
+        # ------------------------------------------------------------------ copy
+        bs_msg = list(history_so_far)               # preserves ancestor msgs
+
+        # ---------------------------------------------------- inject system once
+        if not any(m["role"] == "system" for m in bs_msg):
+            bs_msg.append({
+                "role": "system",
+                "content": brainstorming_system_msg.format(
+                    task_description = prompt["task_description"],
+                    code             = code,
                 )
-            agent = random.choice(available_agents)
+            })
 
-            # 3️⃣ update the histories
-            current_path_ids = ancestor_ids | {agent.id}
-            bs_agent_id_histories[(i_bs, j_bs)] = current_path_ids
-            
-            # for branch 0 start empty; otherwise continue from previous branch
-            msg_history = [] if j_bs == 0 else bs_msg_histories[(i_bs, j_bs - 1)]
+        # --------------------------------------------------- construct user turn
+        user_prompt = f"[Agent: {agent_id}] " + idea_first_prompt.format(
+            task_description = prompt["task_description"]
+        )
 
-            system_message = brainstorming_system_msg.format(
-                task_description=prompt["task_description"],
-                code=code
+        # talk to LLM *once* (temp_history is a throw-away list)
+        temp_history = []
+        assistant_txt, temp_history = get_response_from_llm(
+            agent          = agent_id,
+            client         = client,
+            model          = model,
+            system_message = idea_system_prompt,
+            msg_history    = temp_history,
+            user_message   = user_prompt,
+        )
+
+        # append exactly one pair to the running history
+        bs_msg.append({"role": "user",      "content": user_prompt})
+        bs_msg.append({"role": "assistant", "content": assistant_txt})
+
+        # parse idea
+        idea_json = extract_json_between_markers(assistant_txt) or {"idea": assistant_txt,
+                                                                    "agent": agents[agent_id]}
+        return bs_msg, [idea_json]
+
+
+    def populate_tree(node, history_so_far, **llm_kwargs):
+        """
+        Depth-first traversal.
+        history_so_far already obeys the 1 + depth*2 rule.
+        """
+        if node["agent_id"] is not None:         # skip dummy root
+            node["bs_msg"], node["ideas"] = get_assistant_msg(
+                node,
+                history_so_far = history_so_far,
+                **llm_kwargs,
             )
+            next_history = node["bs_msg"]
+        else:
+            next_history = history_so_far
 
-            text, updated_history = get_response_from_llm(
-                agent=agent,
-                client=client,
-                model=model,
-                system_message=system_message,
-                msg_history=msg_history
-            )
+        for child in node["children"]:
+            populate_tree(child, next_history, **llm_kwargs)
 
-            # Store the history under (agent_idx, branch_idx)
-            bs_msg_histories[(i_bs, j_bs)] = updated_history
+    bs_agent_tree = build_bs_agent_tree(
+        agents, num_depth=num_depth, num_branch=num_branch, seed=42
+    )
 
-            for _ in range(max_num_generations):
-                msg_history=[]
-                try:
-                    prev_ideas_string = "\n\n".join(idea_str_archive)
-                    
-                    print(f"Generating idea {_ + 1}/{max_num_generations} ...")
-                    text, msg_history = get_response_from_llm(
-                        idea_first_prompt.format(
-                            task_description=prompt["task_description"],
-                            code=code,
-                            prev_ideas_string=prev_ideas_string,
-                            brainstorming=bs_msg_history,
-                            num_reflections=num_reflections,
-                        ),
-                        client=client,
-                        model=model,
-                        system_message=idea_system_prompt,
-                        msg_history=msg_history,
-                    )
-                    ## PARSE OUTPUT
-                    json_output = extract_json_between_markers(text)
-                    assert json_output is not None, "Failed to extract JSON from LLM output"
-                    print()
-                    print(f"Iteration 1/{num_reflections} Generated Ideas: ")
-                    print(json_output)
-        
-                    # Iteratively improve task.
-                    if num_reflections > 1:
-                        for j in range(num_reflections - 1):
-                            text, msg_history = get_response_from_llm(
-                                idea_reflection_prompt.format(
-                                    current_round=j + 2, num_reflections=num_reflections
-                                ),
-                                client=client,
-                                model=model,
-                                system_message=idea_system_prompt,
-                                msg_history=msg_history,
-                            )
-                            ## PARSE OUTPUT
-                            json_output = extract_json_between_markers(text)
-                            assert (
-                                    json_output is not None
-                            ), "Failed to extract JSON from LLM output"
-                            print()
-                            print(f"Iteration {j + 2}/{num_reflections} Generated Ideas: ")
-                            print(json_output)
-        
-                            if "I am done" in text:
-                                print()
-                                print(f"Idea generation converged after {j + 2} iterations.")
-                                break
-        
-                    idea_str_archive.append(json.dumps(json_output))
-                    all_ideas[(i_bs, j_bs)] = json.loads(json.dumps(json_output))
-                        
-                except Exception as e:
-                    print(f"Failed to generate idea: {e}")
-                    continue
+    populate_tree(
+        bs_agent_tree,
+        history_so_far = [],      # start empty
+        prompt         = prompt,
+        code           = code,
+        client         = client,
+        model          = model,
+    )
 
     ## SAVE IDEAS
 
-    with open(osp.join(base_dir, "all_ideas.json"), "w") as f:
-        json.dump(all_ideas, f, indent=4)
+    with open(osp.join(base_dir, "bs_agent_tree.json"), "w") as f:
+        json.dump(bs_agent_tree, f, indent=4)
 
-    with open(osp.join(base_dir, "bs_msg_histories.json"), "w") as f:
-        json.dump(bs_msg_histories, f, indent=4)
-
-    return all_ideas, bs_msg_histories
+    return bs_agent_tree
 
 
 # GENERATE IDEAS OPEN-ENDED
@@ -772,7 +783,7 @@ def check_idea_novelty(
         json.dump(ideas, f, indent=4)
 
     return ideas
-'''
+
 
 def check_idea_novelty_and_make_agents(
         ideas,
@@ -928,6 +939,114 @@ def check_idea_novelty_and_make_agents(
     print("File Saved")
 
     return ideas, agents
+    
+'''
+
+def check_idea_novelty_in_bs_agent_tree(
+    bs_agent_tree,  # {"agent_ids":[],"bs_msg":[],"children":[{same structure}, ]}
+    base_dir,
+    client,
+    model,
+    n_bs_step,
+    max_num_iterations=10,
+    engine="semanticscholar",
+):
+    with open(osp.join(base_dir, "experiment.py"), "r") as f:
+        code = f.read()
+    with open(osp.join(base_dir, "prompt.json"), "r") as f:
+        prompt = json.load(f)
+        task_description = prompt["task_description"]
+
+    def check(ideas):
+        idea = ideas[0]
+
+        print(f"\nChecking novelty of idea: {idea['Name']}")
+        
+        novel = False
+        msg_history = []
+        papers_str = ""
+        thought_output = ""
+
+        for j in range(max_num_iterations):
+            try:
+                text, msg_history = get_response_from_llm(
+                    novelty_prompt.format(
+                        current_round=j + 1,
+                        num_rounds=max_num_iterations,
+                        idea=idea,
+                        last_query_results=papers_str,
+                    ),
+                    client=client,
+                    model=model,
+                    system_message=novelty_system_msg.format(
+                        num_rounds=max_num_iterations,
+                        task_description=task_description,
+                        code=code,
+                    ),
+                    msg_history=msg_history,
+                )
+                thought_output = extract_text_inside_backticks(text, "thought") or thought_output
+
+                if "decision made: novel" in text.lower():
+                    print("Decision made: novel after round", j)
+                    novel = True
+                    break
+                if "decision made: not novel" in text.lower():
+                    print("Decision made: not novel after round", j)
+                    break
+
+                # parse JSON
+                json_output = extract_json_between_markers(text)
+                assert json_output is not None, "Failed to extract JSON from LLM output"
+
+                # search
+                query = json_output.get("Query", "")
+                papers = search_for_papers(query, result_limit=10, engine=engine)
+                if not papers:
+                    papers_str = "No papers found."
+                else:
+                    paper_strings = []
+                    for i, paper in enumerate(papers):
+                        paper_strings.append(
+                                """{i}: {title}. {authors}. {venue}, {year}.\nNumber of citations: {cites}\nAbstract: {abstract}""".format(
+                                    i=i,
+                                    title=paper["title"],
+                                    authors=paper["authors"],
+                                    venue=paper["venue"],
+                                    year=paper["year"],
+                                    cites=paper["citationCount"],
+                                    abstract=paper["abstract"],
+                                )
+                        )
+                    papers_str = "\n\n".join(paper_strings)
+
+            except Exception as e:
+                print(f"Error: {e}")
+                continue
+
+        print()
+        print(f"novelty: {novel}")
+
+        return [novel]
+
+
+    def add_novelty_to_tree(node, depth):
+
+        if node["children"] == []:
+            return None
+
+        else:
+            for i, node_dict in enumerate(node["children"]):
+                novelties = check(node_dict["ideas"])
+                node["children"][i]["novelties"] = novelties
+
+                add_novelty_to_tree(node_dict, depth + 1)
+            
+
+    #bs_agent_tree = {"agent_id": None, "agent_ids": [], "node_ids": [], "bs_msg": [], "ideas": [], "children": []}
+    add_novelty_to_tree(bs_agent_tree, 0)
+
+    return bs_agent_tree
 
 
 if __name__ == "__main__":
