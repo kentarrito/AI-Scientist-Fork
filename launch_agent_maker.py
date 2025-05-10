@@ -378,7 +378,7 @@ if __name__ == "__main__":
         )
 
     with open(osp.join(base_dir, f"bs_agent_tree.json"), "w") as f:
-        json.dump(bs_agent_tree, f, indent=4)
+        json.dump(updated_bs_agent_tree, f, indent=4)
 
 
 '''
