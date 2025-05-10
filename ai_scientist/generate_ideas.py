@@ -20,39 +20,16 @@ brainstorming_system_msg = """You are super genius and try to brainstorm to make
 </experiment.py>
 """
 
-brainstorming_prompt = """
+brainstorming_prompt = """Try to expand your thoughts and question about this topic following the instruction below. 
 
-Here are the brainstorming that you have already made before:
-
-'''
-{brainstorming_history}
-'''
-
-Try to expand your thoughts and question about this topic following the agents below. 
-{agents}
-
-Respond in the following format:
-
-BRAINSTORMING:
-```text
-<TEXT>
-```
-
-In <TEXT>, try to expand your thoughts about the topic.
-"""
+Instruction:{agent}"""
 
 idea_first_prompt = """{task_description}
 <experiment.py>
 {code}
 </experiment.py>
 
-Here is some additional brainstorming to guide your creativity:
-
-'''
-{brainstorming}
-'''
-
-Using the above brainstorming as inspiration, come up with the next impactful and creative idea for research experiments and directions you can feasibly investigate with the code provided. Draw clear connections between your idea and the brainstormed insights where possible.  
+Using the above brainstorming dialog as inspiration, come up with the next impactful and creative idea for research experiments and directions you can feasibly investigate with the code provided. Draw clear connections between your idea and the brainstormed insights where possible.  
 Note that you will not have access to any additional resources or datasets. Make sure any idea is not overfit to the specific training dataset or model, and has wider significance.
 
 Respond in the following format:
@@ -266,14 +243,13 @@ def generate_bs_agents_dataset(
 
     idea_system_prompt = prompt["system"]
 
-    print()
-    print("Brainstorming...")
+    
     
     bs_msg_histories = {}  # {(depth,branch):[{"system":}...], ...}
     bs_agent_id_histories = {}  # {(depth,branch):id, ...}
     all_ideas = {}
 
-    num_depth = 3
+    num_depth = 2
     num_branch = 2
     n_agents = len(agents)
     bs_agent_tree = {}  # [{"agent_id":, "node_id":[0], "bs_msg":[{"role":"system", "content":"..."}], "ideas":[{}], "children":[{"msg":[{"role":"user"}, {"role":"assistant"}]}]}, ]
@@ -286,7 +262,7 @@ def generate_bs_agents_dataset(
 
         n_agents = len(agents)
 
-        def _grow(node, depth, forbidden):
+        def _grow(node, depth, forbidden, count):
             if depth == num_depth:
                 return
             available = list(set(range(n_agents)) - forbidden)
@@ -306,10 +282,13 @@ def generate_bs_agents_dataset(
                     "children": [],
                 }
                 node["children"].append(child)
-                _grow(child, depth + 1, forbidden | {a_idx})
+                count += 1
+                #print("node count: ", count)
+
+                _grow(child, depth + 1, forbidden | {a_idx}, count)
 
         root = {"agent_id": None, "agent_ids": [], "node_ids": [], "bs_msg": [], "ideas": [], "children": []}
-        _grow(root, 0, set())
+        _grow(root, 0, set(), 0)
         return root
 
     def get_assistant_msg(
@@ -334,41 +313,50 @@ def generate_bs_agents_dataset(
         if not any(m["role"] == "system" for m in bs_msg):
             bs_msg.append({
                 "role": "system",
-                "content": brainstorming_system_msg.format(
-                    task_description = prompt["task_description"],
-                    code             = code,
-                )
+                "content": 
             })
 
         # --------------------------------------------------- construct user turn
-        user_prompt = f"[Agent: {agent_id}] " + idea_first_prompt.format(
+
+        bs_sys_msg = brainstorming_system_msg.format(
             task_description = prompt["task_description"],
             code             = code,
-            brainstorming    = bs_msg,
+        )
+
+        bs_prompt = brainstorming_prompt.format(
+            agent = agents[agent_id],
+        )
+
+        bs_txt, bs_msg = get_response_from_llm(
+            bs_prompt,
+            client         = client,
+            model          = model,
+            system_message = bs_sys_msg,
+            msg_history    = bs_msg,
+        )
+
+        idea_prompt = idea_first_prompt.format(
+            task_description = prompt["task_description"],
+            code             = code,
             num_reflections  = num_reflections,
         )
 
         # talk to LLM *once* (temp_history is a throw-away list)
-        temp_history = []
-        assistant_txt, temp_history = get_response_from_llm(
+        idea_txt, _ = get_response_from_llm(
             user_prompt,
             client         = client,
             model          = model,
-            system_message = idea_system_prompt,
-            msg_history    = temp_history,
+            msg_history    = bs_msg,
         )
 
-        # append exactly one pair to the running history
-        bs_msg.append({"role": "user",      "content": user_prompt})
-        bs_msg.append({"role": "assistant", "content": assistant_txt})
-
         # parse idea
-        idea_json = extract_json_between_markers(assistant_txt) or {"idea": assistant_txt,
+        idea_json = extract_json_between_markers(idea_txt) or {"idea": idea_txt,
                                                                     "agent": agents[agent_id]}
         return bs_msg, [idea_json]
 
+    total_num_node = num_branch**(num_depth+1) - 2
 
-    def populate_tree(node, history_so_far, **llm_kwargs):
+    def populate_tree(node, history_so_far, count, **llm_kwargs):
         """
         Depth-first traversal.
         history_so_far already obeys the 1 + depth*2 rule.
@@ -380,19 +368,28 @@ def generate_bs_agents_dataset(
                 **llm_kwargs,
             )
             next_history = node["bs_msg"]
+            print("populate count: {count}/{total_num_node}")
         else:
             next_history = history_so_far
 
         for child in node["children"]:
-            populate_tree(child, next_history, **llm_kwargs)
+            populate_tree(child, next_history, count, **llm_kwargs)
+
+    print()
+    print("Making Brainstorming Tree...")
+    print(f"num_depth:{num_depth}, num_branch:{num_branch}, n_agents:{n_agents}, ")
 
     bs_agent_tree = build_bs_agent_tree(
         agents, num_depth=num_depth, num_branch=num_branch, seed=42
     )
 
+    print()
+    print("Brainstorming and Genrating Ideas...")
+
     populate_tree(
         bs_agent_tree,
         history_so_far = [],      # start empty
+        count = 0,
         prompt         = prompt,
         code           = code,
         client         = client,
