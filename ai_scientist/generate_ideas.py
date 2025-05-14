@@ -1062,11 +1062,20 @@ def check_idea_novelty_in_bs_agent_tree(
             return None
 
         else:
+            for node_dict in node["children"]:
+                novelties = check(node_dict["ideas"])
+                node_dict["novelties"] = novelties
+
+                add_novelty_to_tree(node_dict, depth + 1)
+
+        """
+        else:
             for i, node_dict in enumerate(node["children"]):
                 novelties = check(node_dict["ideas"])
                 node["children"][i]["novelties"] = novelties
 
                 add_novelty_to_tree(node_dict, depth + 1)
+        """
             
 
     #bs_agent_tree = {"agent_id": None, "agent_ids": [], "node_ids": [], "bs_msg": [], "ideas": [], "children": []}
