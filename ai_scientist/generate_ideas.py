@@ -973,6 +973,7 @@ def check_idea_novelty_and_make_agents(
 def check_idea_novelty_in_bs_agent_tree(
     bs_agent_tree,  # {"agent_ids":[],"bs_msg":[],"children":[{same structure}, ]}
     base_dir,
+    dataset_dir,
     client,
     model,
     max_num_iterations=10,
@@ -1062,6 +1063,8 @@ def check_idea_novelty_in_bs_agent_tree(
         if not node["ideas"] == []:
             novelties = check(node["ideas"])
             node["novelties"] = novelties
+            with open(osp.join(dataset_dir, f"bs_agent_tree.json"), "w") as f:
+                json.dump(bs_agent_tree, f, indent=4)
 
         for child in node["children"]:
             add_novelty_to_tree(child, depth + 1)

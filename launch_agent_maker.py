@@ -374,12 +374,13 @@ if __name__ == "__main__":
         updated_bs_agent_tree = check_idea_novelty_in_bs_agent_tree(
             bs_agent_tree=bs_agent_tree,
             base_dir=base_dir,
+            dataset_dir=dataset_dir,
             client=client,
             model=client_model,
             engine=args.engine,
         )
 
-    with open(osp.join(base_dir, f"bs_agent_tree.json"), "w") as f:
+    with open(osp.join(dataset_dir, f"bs_agent_tree.json"), "w") as f:
         json.dump(updated_bs_agent_tree, f, indent=4)
 
 
