@@ -284,6 +284,7 @@ def generate_bs_agents_dataset(
                     "node_ids" : node["node_ids"] + [b],
                     "bs_msg"  : [],
                     "ideas"   : [],
+                    "novelties":[],
                     "children": [],
                 }
                 node["children"].append(child)
@@ -1058,6 +1059,14 @@ def check_idea_novelty_in_bs_agent_tree(
 
     def add_novelty_to_tree(node, depth):
 
+        if not node["ideas"] == []:
+            novelties = check(node["ideas"])
+            node["novelties"] = novelties
+
+        for child in node["children"]:
+            add_novelty_to_tree(child, depth + 1)
+
+        """
         if node["children"] == []:
             return None
 
@@ -1067,6 +1076,7 @@ def check_idea_novelty_in_bs_agent_tree(
                 node_dict["novelties"] = novelties
 
                 add_novelty_to_tree(node_dict, depth + 1)
+        """
 
         """
         else:
