@@ -208,6 +208,7 @@ def generate_ideas_with_brainstorming(
 # GENERATE IDEAS
 def generate_bs_agents_dataset(
         base_dir,
+        dataset_dir,
         agents,
         client,
         model,
@@ -243,16 +244,19 @@ def generate_bs_agents_dataset(
 
     idea_system_prompt = prompt["system"]
 
-    
-    
-    bs_msg_histories = {}  # {(depth,branch):[{"system":}...], ...}
-    bs_agent_id_histories = {}  # {(depth,branch):id, ...}
-    all_ideas = {}
-
     num_depth = 2
     num_branch = 2
     n_agents = len(agents)
-    bs_agent_tree = {}  # [{"agent_id":, "node_id":[0], "bs_msg":[{"role":"system", "content":"..."}], "ideas":[{}], "children":[{"msg":[{"role":"user"}, {"role":"assistant"}]}]}, ]
+
+    if not os.path.exists(dataset_dir):
+        os.makedirs(dataset_dir)
+        bs_agent_tree = {}
+    else:
+        if os.path.exists(f"{dataset_dir}/bs_agent_tree.json"):
+            with open(f"{dataset_dir}/bs_agent_tree.json") as f:
+                bs_agent_tree = json.load(f)
+        else:
+            bs_agent_tree = {}  # [{"agent_id":, "node_id":[0], "bs_msg":[{"role":"system", "content":"..."}], "ideas":[{}], "children":[{"msg":[{"role":"user"}, {"role":"assistant"}]}]}, ]
 
     def build_bs_agent_tree(agents, *, num_depth=3, num_branch=2, seed=None):
         if seed is not None:
@@ -385,11 +389,16 @@ def generate_bs_agents_dataset(
         history_so_far already obeys the 1 + depth*2 rule.
         """
         if node["agent_id"] is not None:         # skip dummy root
-            node["bs_msg"], node["ideas"] = get_assistant_msg(
-                node,
-                history_so_far = history_so_far,
-                **llm_kwargs,
-            )
+            if node["bs_msg"] == []:
+                node["bs_msg"], node["ideas"] = get_assistant_msg(
+                    node,
+                    history_so_far = history_so_far,
+                    **llm_kwargs,
+                )
+
+                with open(osp.join(dataset_dir, "bs_agent_tree.json"), "w") as f:
+                    json.dump(bs_agent_tree, f, indent=4)
+            
             next_history = node["bs_msg"]
             populate_count += 1
             print(f"populate count: {populate_count}/{total_num_node}")
@@ -423,7 +432,7 @@ def generate_bs_agents_dataset(
 
     ## SAVE IDEAS
 
-    with open(osp.join(base_dir, "bs_agent_tree.json"), "w") as f:
+    with open(osp.join(dataset_dir, "bs_agent_tree.json"), "w") as f:
         json.dump(bs_agent_tree, f, indent=4)
 
     return bs_agent_tree
