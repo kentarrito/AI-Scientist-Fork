@@ -277,6 +277,7 @@ def generate_bs_agents_dataset(
             for b in range(num_branch):
                 a_idx = picked_a_idxs[b]
                 child = {
+                    "task": f"""{task_description}"""
                     "agent"   : agents[a_idx],
                     "agent_ids": node["agent_ids"] + [a_idx],
                     "agent_id": a_idx,
