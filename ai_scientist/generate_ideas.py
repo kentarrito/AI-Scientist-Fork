@@ -410,11 +410,12 @@ def generate_bs_agents_dataset(
         for child in node["children"]:
             populate_tree(child, next_history, **llm_kwargs)
 
-    print()
-    print("Making Brainstorming Tree...")
-    print(f"num_depth:{num_depth}, num_branch:{num_branch}, n_agents:{n_agents}, ")
+    
 
     if bs_agent_tree == {}:
+        print()
+        print("Making Brainstorming Tree...")
+        print(f"num_depth:{num_depth}, num_branch:{num_branch}, n_agents:{n_agents}, ")
         bs_agent_tree = build_bs_agent_tree(
             agents, num_depth=num_depth, num_branch=num_branch, seed=42
         )
@@ -422,7 +423,7 @@ def generate_bs_agents_dataset(
         print(bs_agent_tree)
 
     else:
-        print("bs_agent_tree is already generated")
+        print("bs_agent_tree is already made")
 
     print()
     print("Brainstorming and Genrating Ideas...")
