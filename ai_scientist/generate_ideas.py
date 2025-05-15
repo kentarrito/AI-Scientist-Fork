@@ -414,11 +414,15 @@ def generate_bs_agents_dataset(
     print("Making Brainstorming Tree...")
     print(f"num_depth:{num_depth}, num_branch:{num_branch}, n_agents:{n_agents}, ")
 
-    bs_agent_tree = build_bs_agent_tree(
-        agents, num_depth=num_depth, num_branch=num_branch, seed=42
-    )
+    if bs_agent_tree == {}:
+        bs_agent_tree = build_bs_agent_tree(
+            agents, num_depth=num_depth, num_branch=num_branch, seed=42
+        )
 
-    print(bs_agent_tree)
+        print(bs_agent_tree)
+
+    else:
+        print("bs_agent_tree is already generated")
 
     print()
     print("Brainstorming and Genrating Ideas...")
@@ -433,7 +437,6 @@ def generate_bs_agents_dataset(
     )
 
     ## SAVE IDEAS
-
     with open(osp.join(dataset_dir, "bs_agent_tree.json"), "w") as f:
         json.dump(bs_agent_tree, f, indent=4)
 
@@ -1061,10 +1064,11 @@ def check_idea_novelty_in_bs_agent_tree(
     def add_novelty_to_tree(node, depth):
 
         if not node["ideas"] == []:
-            novelties = check(node["ideas"])
-            node["novelties"] = novelties
-            with open(osp.join(dataset_dir, f"bs_agent_tree.json"), "w") as f:
-                json.dump(bs_agent_tree, f, indent=4)
+            if node["novelties"] == []:
+                novelties = check(node["ideas"])
+                node["novelties"] = novelties
+                with open(osp.join(dataset_dir, f"bs_agent_tree.json"), "w") as f:
+                    json.dump(bs_agent_tree, f, indent=4)
 
         for child in node["children"]:
             add_novelty_to_tree(child, depth + 1)
