@@ -420,7 +420,7 @@ def generate_bs_agents_dataset(
         print("Making Brainstorming Tree...")
         print(f"num_depth:{num_depth}, num_branch:{num_branch}, n_agents:{n_agents}, ")
         bs_agent_tree = build_bs_agent_tree(
-            agents, num_depth=num_depth, num_branch=num_branch, seed=42
+            agents, num_depth=num_depth, num_branch=num_branch  #, seed=42
         )
 
         print(bs_agent_tree)
