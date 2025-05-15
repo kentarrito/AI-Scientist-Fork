@@ -357,7 +357,8 @@ if __name__ == "__main__":
     """
     base_dir = osp.join("templates", args.experiment)
     results_dir = osp.join("results", args.experiment)
-    dataset_dir = osp.join("dataset", args.experiment)
+    #dataset_dir = osp.join("dataset", args.experiment)
+    dataset_dir = "~/dataset"
 
     bs_agent_tree = generate_bs_agents_dataset(
         base_dir,
