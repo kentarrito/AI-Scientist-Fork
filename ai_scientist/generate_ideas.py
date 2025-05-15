@@ -251,11 +251,14 @@ def generate_bs_agents_dataset(
     if not os.path.exists(dataset_dir):
         os.makedirs(dataset_dir)
         bs_agent_tree = {}
+        print(f"dataset_dir:{dataset_dir} was not existed")
     else:
         if os.path.exists(f"{dataset_dir}/bs_agent_tree.json"):
+            print(f"{dataset_dir}/bs_agent_tree.json was already existed")
             with open(f"{dataset_dir}/bs_agent_tree.json") as f:
                 bs_agent_tree = json.load(f)
         else:
+            print(f"{dataset_dir}/bs_agent_tree.json was not existed")
             bs_agent_tree = {}  # [{"agent_id":, "node_id":[0], "bs_msg":[{"role":"system", "content":"..."}], "ideas":[{}], "children":[{"msg":[{"role":"user"}, {"role":"assistant"}]}]}, ]
 
     def build_bs_agent_tree(agents, *, num_depth=3, num_branch=2, seed=None):
