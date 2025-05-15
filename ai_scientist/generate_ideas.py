@@ -244,7 +244,7 @@ def generate_bs_agents_dataset(
 
     idea_system_prompt = prompt["system"]
 
-    num_depth = 2
+    num_depth = 3
     num_branch = 2
     n_agents = len(agents)
 
